@@ -9,17 +9,19 @@ const {
   getTagList
 } = require('./Over_write_PRD');
 let appiumProcess;
+let maxWaitTime = 60000; // 1 minute max to avoid infinite wait
+const startTime = Date.now();
 
 async function startAppium() {
   return new Promise((resolve, reject) => {
     console.log('⏳ Starting Appium server on port 4725...');
     appiumProcess = spawn('appium', ['-p', '4725'], { shell: true });
 
-    appiumProcess.stdout.on('data', (data) => {
-      const output = data.toString();
-      process.stdout.write(output);
+     appiumProcess.stdout.on('data', (data) => {
+       const output = data.toString();
+    //   process.stdout.write(output);
       if (output.includes('Appium REST http interface listener started')) resolve();
-    });
+     });
 
     appiumProcess.stderr.on('data', (data) => process.stderr.write(data.toString()));
     appiumProcess.on('error', (err) => reject(err));
@@ -38,6 +40,7 @@ async function launchApp() {
   const opts = {
     path: '/',
     port: 4725,
+    logLevel: 'error',
     capabilities: {
       platformName: 'Android',
       'appium:platformVersion': '14',
@@ -89,10 +92,13 @@ async function launchApp() {
     await browser.$('id=com.blubirch.rims.relianceQAReseller:id/btnProceed').click();
     for (let k = j; k < tagList.length; k++) {
       const Tag_name = tagList[k];
+      const Disposition =await browser.$('id=com.blubirch.rims.relianceQAReseller:id/tvDisposition').getText();
+      console.log("Tag id :",Tag_name, "Disposition :", Disposition);
       await browser.$('//android.widget.EditText[@resource-id="com.blubirch.rims.relianceQAReseller:id/editText" and @text="Tag ID"]').setValue(Tag_name);
       if (k === tagList.length - 1) {
-        await browser.$('id=com.blubirch.rims.relianceQAReseller:id/btnCompleteIRD').click();
-        console.log("App Completed time", new Date().toLocaleTimeString());
+        await browser.$('id=com.blubirch.rims.relianceQAReseller:id/btnGenerateGRN').click();
+        console.log("GRN Completed successfully");
+        console.log("App Completed time and Process completed", new Date().toLocaleTimeString());
         break outerLoop;
       } else {
         await browser.$('id=com.blubirch.rims.relianceQAReseller:id/btnAddItem').click();
@@ -120,8 +126,10 @@ async function launchApp() {
   try {
     
     console.log('📤 Starting file upload process...');
+    console.log("Process started at ", new Date().toLocaleTimeString());
     await prdUploadWorkflow(); // 🔁 No IRD return required
     console.log('✅ File upload completed.');
+    console.log("File Completed time ", new Date().toLocaleTimeString());
     await startAppium();
 
     await launchApp(); // 🔁 Just launch app — no IRD passed

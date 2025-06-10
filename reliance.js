@@ -16,6 +16,7 @@ const Propertiesrel = {
   Upload: properties.get('upload'),
   Select_file: properties.get('select_file'),
   Finish_btn: properties.get('finish_btn'),
+  Upload_id: properties.get('upload_id'),
   File_status: properties.get('status_file'),
   Package: properties.get('apk_pack'),
   APK_userfield: properties.get('apk_urfield'),
