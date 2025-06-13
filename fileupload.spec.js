@@ -1,18 +1,19 @@
 // prd_upload.js - Playwright version of PRD_upload.java
 
 const { firefox } = require('@playwright/test');
+const { test } = require('@playwright/test');
 const fs = require('fs');
 const path = require('path');
 const { exec } = require('child_process');
-const Properties = require('./reliance'); // Contains selectors and config
+const Properties = require('./reliance.js'); // Contains selectors and config
 const {
   overwritePRD,
   getIRD,
   getArticleIds,
   getSerials,
   getTagList
-} = require('./Over_write_PRD');
-const appium =require('./appiumserver');
+} = require('./Over_write_PRD.js');
+const appium =require('./appiumserver.spec.js');
 // const screenz = require('screenz');
 // const screen = screenz();
 const screenshotDir = path.join(__dirname, 'screenshots');
@@ -32,7 +33,8 @@ async function prdUploadWorkflow() {
       console.log('SKU Codes:', global.Article_IDS);
       console.log('Serial Numbers:', global.Serial1);
       console.log('Tag List:', global.tagList);
-
+      console.log('📤 Starting file upload process...');
+      console.log("Process started at ", new Date().toLocaleTimeString());
       // Step 2: Launch browser
       const browser = await firefox.launch({ headless: false });
       const context = await browser.newContext({ viewport: null });
@@ -81,6 +83,8 @@ async function prdUploadWorkflow() {
   //     console.log(`🗑️ Deleted old screenshot: ${fileToDelete}`);
   //   }
   // }
+  console.log('✅ File upload completed.');
+    console.log("File Completed time ", new Date().toLocaleTimeString());
         const Upload_ID =await page.textContent(Properties.Upload_id);
   // 🖼️ Capture new screenshot
   const screenshotPath = path.join(screenshotDir, `Uploaded_successfully_${global.IRD}_Upload_ID_${Upload_ID}.png`);
@@ -97,11 +101,21 @@ async function prdUploadWorkflow() {
         global.tagList = [];
       }
 
-      await browser.close();
+      // await browser.close();
     } catch (error) {
       console.error('Error:', error);
     }
   }
 }
+test('PRD Upload Flow', async ({ page, context, browser }) => {
+  test.setTimeout(120000);
+  await prdUploadWorkflow(page);
 
-module.exports = prdUploadWorkflow;
+  // optional delay or assertion here
+
+  // Now close safely at the end if needed
+   //await page.close();
+   //await context.close();
+   //await browser.close();
+});
+ module.exports = prdUploadWorkflow;

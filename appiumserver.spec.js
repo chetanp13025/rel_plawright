@@ -1,6 +1,7 @@
 const { spawn } = require('child_process');
 const { remote } = require('webdriverio');
-const prdUploadWorkflow = require('./fileupload'); // no IRD return needed
+const prdUploadWorkflow = require('./fileupload.spec'); // no IRD return needed
+const { test } = require('@playwright/test');
 const {
   overwritePRD,
   getIRD,
@@ -122,20 +123,15 @@ async function launchApp() {
 }
 
 // Main execution
-(async () => {
+test('PRD Upload and Appium End-to-End Flow', async () => {
+  test.setTimeout(120000);
   try {
-    
-    console.log('📤 Starting file upload process...');
-    console.log("Process started at ", new Date().toLocaleTimeString());
     await prdUploadWorkflow(); // 🔁 No IRD return required
-    console.log('✅ File upload completed.');
-    console.log("File Completed time ", new Date().toLocaleTimeString());
     await startAppium();
-
     await launchApp(); // 🔁 Just launch app — no IRD passed
   } catch (error) {
     console.error('❌ Error during execution:', error);
   } finally {
     await stopAppium();
   }
-})();
+});
