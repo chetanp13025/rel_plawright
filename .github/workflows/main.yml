@@ -1,4 +1,4 @@
-name: Playwright Tests
+name: Playwright Tests on Windows
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
 
     steps:
       - name: ⬇️ Checkout repository
@@ -22,10 +22,10 @@ jobs:
       - name: 📦 Install dependencies
         run: npm install
 
-      - name: 🧪 Run Playwright tests
+      - name: 🧪 Run Playwright tests with HTML report
         run: npx playwright test --reporter=html
 
-      - name: 📤 Upload Playwright HTML Report
+      - name: 📤 Upload Playwright HTML report
         if: always()
         uses: actions/upload-artifact@v4
         with:
