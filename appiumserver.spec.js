@@ -1,7 +1,7 @@
 const { spawn } = require('child_process');
 const { remote } = require('webdriverio');
-const prdUploadWorkflow = require('./fileupload.spec'); // no IRD return needed
-const { test } = require('@playwright/test');
+const prdUploadWorkflow = require('./utils/prdUploadWorkflow');
+const { test, expect } = require('@playwright/test');
 const {
   overwritePRD,
   getIRD,
@@ -9,21 +9,19 @@ const {
   getSerials,
   getTagList
 } = require('./Over_write_PRD');
-let appiumProcess;
-let maxWaitTime = 60000; // 1 minute max to avoid infinite wait
-const startTime = Date.now();
 
+let appiumProcess;
+let sharedIRD = '';
+let sharedTagList = [];
+let tagDispositionMap = [];
+let ird;
 async function startAppium() {
   return new Promise((resolve, reject) => {
-    console.log('⏳ Starting Appium server on port 4725...');
     appiumProcess = spawn('appium', ['-p', '4725'], { shell: true });
-
-     appiumProcess.stdout.on('data', (data) => {
-       const output = data.toString();
-    //   process.stdout.write(output);
+    appiumProcess.stdout.on('data', (data) => {
+      const output = data.toString();
       if (output.includes('Appium REST http interface listener started')) resolve();
-     });
-
+    });
     appiumProcess.stderr.on('data', (data) => process.stderr.write(data.toString()));
     appiumProcess.on('error', (err) => reject(err));
     appiumProcess.on('exit', (code) => {
@@ -31,12 +29,11 @@ async function startAppium() {
     });
   });
 }
+
 async function stopAppium() {
-  if (appiumProcess) {
-    console.log('🛑 Stopping Appium server...');
-    appiumProcess.kill();
-  }
+  if (appiumProcess) appiumProcess.kill();
 }
+
 async function launchApp() {
   const opts = {
     path: '/',
@@ -51,87 +48,126 @@ async function launchApp() {
       'appium:appActivity': 'com.blubirch.commons.presentation.login.LoginActivity'
     }
   };
+
   let browser;
   try {
     browser = await remote(opts);
-    console.log('📱 App launched successfully!');
-    console.log("App Launched", new Date().toLocaleTimeString());
-    // Sample login steps — modify as needed
-    await browser.$('id=com.blubirch.rims.relianceQAReseller:id/edtEmail').setValue('chetan_rl_q_ex');
-    await browser.$('id=com.blubirch.rims.relianceQAReseller:id/edtPassword').setValue('blubirch123');
-    await browser.$('id=com.blubirch.rims.relianceQAReseller:id/btnSignIn').click();
-    await browser.$('//android.widget.TextView[@resource-id="com.blubirch.rims.relianceQAReseller:id/itemTV" and @text="Item Inward"]').click();
- const ird = getIRD();
- console.log('IRD:', ird);
- await browser.$('id=com.blubirch.rims.relianceQAReseller:id/editText').setValue(ird);
- await browser.pressKeyCode(66); // ENTER key
- await browser.pause(100);
- outerLoop: for (let i = 0; i < Article_IDS.length; i++) {
-  const Article_ID = Article_IDS[i];
-  await browser.$('//android.widget.EditText[@resource-id="com.blubirch.rims.relianceQAReseller:id/editText" and @text="Article Id/Tag Id"]').setValue(Article_ID);
-  await browser.pressKeyCode(66); // ENTER
-  for (let j = i; j < Serial1.length; j++) {
-    const serial_no1 = Serial1[j];
-    await browser.$('//android.widget.EditText[@resource-id="com.blubirch.rims.relianceQAReseller:id/editText" and @text="Item Serial Number"]').setValue(serial_no1);
-    await browser.$('id=com.blubirch.rims.relianceQAReseller:id/btnGradeItem').click();
-    await browser.pause(100);
-    await browser.$('//android.widget.CheckBox[@resource-id="com.blubirch.rims.relianceQAReseller:id/checkbox" and @text="Yes"]').click();
-    await browser.pause(100);
-    await browser.$('//android.widget.CheckBox[@resource-id="com.blubirch.rims.relianceQAReseller:id/checkbox" and @text="Yes"]').click();
-    // await driver.$(properties.CheckBox3).click();
-    // if (i === 1 && !permissionHandled) {
-    //   const permissionBtn = await driver.$('id=com.android.permissioncontroller:id/permission_allow_foreground_only_button');
-    //   if (await permissionBtn.isDisplayed()) {
-    //     await permissionBtn.click();
-    //     permissionHandled = true;
-    //   }
-    // }
-    // await driver.$('id=com.blubirch.rims.whirlpoolDemo:id/ivCapture').click();
-    // await driver.pause(6000);
-    // await driver.$('id=com.blubirch.rims.whirlpoolDemo:id/ivConfirm').click();
-    await browser.$('id=com.blubirch.rims.relianceQAReseller:id/btNext').click();
-    await browser.$('id=com.blubirch.rims.relianceQAReseller:id/btnProceed').click();
-    for (let k = j; k < tagList.length; k++) {
-      const Tag_name = tagList[k];
-      const Disposition =await browser.$('id=com.blubirch.rims.relianceQAReseller:id/tvDisposition').getText();
-      console.log("Tag id :",Tag_name, "Disposition :", Disposition);
-      await browser.$('//android.widget.EditText[@resource-id="com.blubirch.rims.relianceQAReseller:id/editText" and @text="Tag ID"]').setValue(Tag_name);
-      if (k === tagList.length - 1) {
-        await browser.$('id=com.blubirch.rims.relianceQAReseller:id/btnGenerateGRN').click();
-        console.log("GRN Completed successfully");
-        console.log("App Completed time and Process completed", new Date().toLocaleTimeString());
-        break outerLoop;
+    test.step('📱 Launching app and initializing session', async () => {
+    }); 
+    await test.step('✅ Username field is visible and Entered Username ', async () => {
+      await browser.$('id=com.blubirch.rims.relianceQAReseller:id/edtEmail').setValue('chetan_rl_q_ex');
+    });
+
+    await test.step('✅ Password field is visible and Entered Password', async () => {
+      await browser.$('id=com.blubirch.rims.relianceQAReseller:id/edtPassword').setValue('blubirch123');
+    });
+
+    await test.step('👆 Sign In button is visible and Clicked on Sign In', async () => {
+      await browser.$('id=com.blubirch.rims.relianceQAReseller:id/btnSignIn').click();
+    });
+
+    await test.step('🔍 Item Inward tab is visible and Clicked on item inward', async () => {
+      await browser.$('//android.widget.TextView[@resource-id="com.blubirch.rims.relianceQAReseller:id/itemTV" and @text="Item Inward"]').click();
+    });
+
+     ird = getIRD();
+    await test.step(`🧾 IRD field is visible and Enter IRD : ${ird}`, async () => {
+      await browser.$('id=com.blubirch.rims.relianceQAReseller:id/editText').setValue(ird);
+      await browser.pressKeyCode(66);
+    });
+
+    const Article_IDS = getArticleIds();
+    const Serial1 = getSerials();
+    const tagList = getTagList();
+
+    outerLoop: for (let i = 0; i < Article_IDS.length; i++) {
+      const Article_ID = Article_IDS[i];
+      const serial_no1 = Serial1[i];
+      const tagName = tagList[i];
+
+      await test.step(`📦 Article ID field is visible and Enter Article ID : ${Article_ID}`, async () => {
+        await browser.$('//android.widget.EditText[@text="Article Id/Tag Id"]').setValue(Article_ID);
+        await browser.pressKeyCode(66);
+      });
+
+      await test.step(`🔢 Serial Number field is visible and Enter Serial Number : ${serial_no1}`, async () => {
+        await browser.$('//android.widget.EditText[@text="Item Serial Number"]').setValue(serial_no1);
+      });
+      await test.step('👆 Grade Item Button is visible and clicked on Grade Item Button ',async()=>{
+        await browser.$('id=com.blubirch.rims.relianceQAReseller:id/btnGradeItem').click();
+        });
+        await test.step('📝 Grading the item', async()=>{
+        await browser.$('//android.widget.CheckBox[@text="Yes"]').click();
+        await browser.pause(100);
+        await browser.$('//android.widget.CheckBox[@text="Yes"]').click();
+        });
+        await test.step('➡️ Next button is enable and clicked on Next button', async()=>{
+        await browser.$('id=com.blubirch.rims.relianceQAReseller:id/btNext').click();
+        });
+        await test.step('✅ Proceed Button is visible and Clicked on Proceed button', async()=>{
+        await browser.$('id=com.blubirch.rims.relianceQAReseller:id/btnProceed').click();
+      });
+
+      const Disposition = await browser.$('id=com.blubirch.rims.relianceQAReseller:id/tvDisposition').getText();
+      tagDispositionMap.push({ tagId: tagName, disposition: Disposition });
+
+      await test.step(`🏷️ Tag ID field is visible and enter Tag ID: ${tagName}`, async () => {
+        await browser.$('//android.widget.EditText[@text="Tag ID"]').setValue(tagName);
+      });
+
+      if (i === tagList.length - 1) {
+        await test.step('✅ Generate GRN button is enable and Clicked on Generate GRN', async () => {
+          await browser.$('id=com.blubirch.rims.relianceQAReseller:id/btnGenerateGRN').click();
+        });
       } else {
-        await browser.$('id=com.blubirch.rims.relianceQAReseller:id/btnAddItem').click();
-        await browser.pause(1000);
+        await test.step('➕ Add item button is enbled And Clicked on Add item button', async () => {
+          await browser.$('id=com.blubirch.rims.relianceQAReseller:id/btnAddItem').click();
+        });
       }
-      continue outerLoop;
     }
-  }
-}
-    // Continue your UI automation after login
-    // You can now locate buttons, navigate screens, etc.
-
   } catch (error) {
-    console.error('❌ Failed to launch app:', error);
+    console.error('❌ App launch failed:', error);
   } finally {
-    if (browser) {
-      // await browser.deleteSession();
-      console.log(' 🛑 Browser session ended.');
-    }
+    if (browser) await browser.deleteSession();
   }
 }
 
-// Main execution
-test('PRD Upload and Appium End-to-End Flow', async () => {
-  test.setTimeout(120000);
-  try {
-    await prdUploadWorkflow(); // 🔁 No IRD return required
-    await startAppium();
-    await launchApp(); // 🔁 Just launch app — no IRD passed
-  } catch (error) {
-    console.error('❌ Error during execution:', error);
-  } finally {
-    await stopAppium();
-  }
+test.describe('📦 Full End-to-End Test Flow', () => {
+  test.setTimeout(420000);
+
+  test('🌐Step 1: Upload PRD File', async ({}, testInfo) => {
+    const { IRD, TagList, ScreenshotPath } = await prdUploadWorkflow(test,testInfo);
+    sharedIRD = IRD;
+    sharedTagList = TagList;
+
+    testInfo.attachments.push({ name: 'IRD Number', body: Buffer.from(IRD || 'Not Found'), contentType: 'text/plain' });
+    testInfo.attachments.push({ name: 'Tag List', body: Buffer.from(TagList?.join('\n') || 'None'), contentType: 'text/plain' });
+    if (ScreenshotPath) {
+      testInfo.attachments.push({ name: 'Upload Screenshot', path: ScreenshotPath, contentType: 'image/png' });
+    }
+  });
+
+  test('📱 Step 2: Mobile App Automation via Appium', async ({}, testInfo) => {
+    await test.step('🚀 Start Appium Server', async () => {
+      await startAppium();
+    });
+
+    await test.step('🤖 Run Mobile App Automation', async () => {
+      await launchApp();
+    });
+
+    await test.step('🛑 Stop Appium Server', async () => {
+      await stopAppium();
+    });
+
+    const dispositionHtml = `
+      <html><body>
+        <table border="1" cellspacing="0" cellpadding="5">
+          <tr><th>Tag ID</th><th>Disposition</th></tr>
+          ${tagDispositionMap.map(entry => `<tr><td>${entry.tagId}</td><td>${entry.disposition}</td></tr>`).join('')}
+        </table>
+      </body></html>`;
+
+    testInfo.attachments.push({ name: 'Disposition Table', body: Buffer.from(dispositionHtml), contentType: 'text/html' });
+  });
 });

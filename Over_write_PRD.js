@@ -27,7 +27,7 @@ function generateIRD() {
 
 function generateTagId(length = 6) {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  return 't-' + Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+  return 'a-' + Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
 }
 
 function overwritePRD() {
