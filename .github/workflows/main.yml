@@ -1,4 +1,4 @@
-name: Playwright Tests on Windows
+name: E2E Playwright + Appium Tests (Windows)
 
 on:
   push:
@@ -7,11 +7,11 @@ on:
   pull_request:
 
 jobs:
-  test:
+  e2e-tests:
     runs-on: windows-latest
 
     steps:
-      - name: ⬇️ Checkout repository
+      - name: ⬇️ Checkout repo
         uses: actions/checkout@v3
 
       - name: 🟢 Setup Node.js
@@ -19,13 +19,28 @@ jobs:
         with:
           node-version: '20'
 
-      - name: 📦 Install dependencies
+      - name: 📦 Install NPM dependencies
         run: npm install
 
-      - name: 🧪 Run Playwright tests with HTML report
+      - name: 🧰 Install Playwright Browsers
+        run: npx playwright install
+
+      - name: 🔧 Install Appium globally
+        run: npm install -g appium
+
+      - name: 📂 Set up AutoIt script (Optional)
+        run: |
+          echo 'Skipping AutoIt UI interaction – simulate upload in code or run headless.'
+
+      - name: 🤖 Start Appium server in background
+        run: |
+          start /B appium -p 4725
+          timeout /T 10
+
+      - name: 🧪 Run Playwright + Appium tests
         run: npx playwright test --reporter=html
 
-      - name: 📤 Upload Playwright HTML report
+      - name: 📤 Upload Playwright HTML Report
         if: always()
         uses: actions/upload-artifact@v4
         with:
