@@ -25,7 +25,7 @@ async function startAppium() {
     appiumProcess.stderr.on('data', (data) => process.stderr.write(data.toString()));
     appiumProcess.on('error', (err) => reject(err));
     appiumProcess.on('exit', (code) => {
-      console.log(`🛑 Appium Server stopped with code ${code}.`);
+      // console.log(`🛑 Appium Server stopped with code ${code}.`);
     });
   });
 }

@@ -11,7 +11,7 @@ const {
   getSerials,
   getTagList
 } = require('../Over_write_PRD.js');
-const isCI = process.env.CI === 'true';
+
 const screenshotDir = path.join(__dirname, '../screenshots');
 const filePath = path.join(__dirname, '../csv_file', 'RL_PRD.csv');
 let success = false;
@@ -59,24 +59,18 @@ async function prdUploadWorkflow(test, testInfo) {
       });
 
       await test.step('📁 Select and Upload PRD File', async () => {
-        if (isCI) {
-          // CI: Simulate file input for GitHub Actions
-          const absolutePath = path.resolve(filePath);
-          const input = await page.$('input[type="file"]');
-          await input.setInputFiles(absolutePath);
-        } else {
-          await page.click(Properties.Select_file);
-          const absolutePath = path.resolve(filePath);
-          await new Promise((resolve, reject) => {
-            exec(`C://autoitfiles/fileupload.exe "${absolutePath}"`, (err) => {
-              if (err) reject(err);
-              else resolve();
-            });
-          });
-        }
-          await page.waitForTimeout(3000);
-          await page.click(Properties.Confirm);
-        });
+       const fileInput= page.locator(Properties.Select_file);
+        await page.waitForTimeout(100);
+        await fileInput.setInputFiles(path.resolve(filePath));
+        // await new Promise((resolve, reject) => {
+        //   exec(`C://autoitfiles/fileupload.exe "${absolutePath}"`, (err) => {
+        //     if (err) reject(err);
+        //     else resolve();
+        //   });
+        // });
+        await page.waitForTimeout(3000);
+        await page.click(Properties.Confirm);
+      });
 
       await test.step('🔄 Wait for upload completion', async () => {
         await page.waitForTimeout(10000);
@@ -88,9 +82,8 @@ async function prdUploadWorkflow(test, testInfo) {
       await test.step('✅ File status is Completed and Fetch Upload ID ', async () => {
         if (statusText === 'Completed') {
           success = true;
-          await test.step('🆔 Fetch Upload ID', async () => {
-            Upload_ID = await page.textContent(Properties.Upload_id);
-          });
+          await test.step('🆔 Fetch Upload ID',async()=>{
+          Upload_ID = await page.textContent(Properties.Upload_id);});
         }
         else if (statusText === 'Import Started') {
           await page.waitForTimeout(3000);
