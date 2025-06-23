@@ -15,6 +15,7 @@ const {
 const screenshotDir = path.join(__dirname, '../screenshots');
 const filePath = path.join(__dirname, '../csv_file', 'RL_PRD.csv');
 let success = false;
+let fileInput;
 let browser, context, page, statusText, Upload_ID, screenshotPath;
 async function prdUploadWorkflow(test, testInfo) {
   while (!success) {
@@ -59,8 +60,8 @@ async function prdUploadWorkflow(test, testInfo) {
       });
 
       await test.step('📁 Select and Upload PRD File', async () => {
-       const fileInput= page.locator(Properties.Select_file);
-        await page.waitForTimeout(100);
+        fileInput = page.locator(Properties.Select_file);
+        // await page.waitForTimeout(100);
         await fileInput.setInputFiles(path.resolve(filePath));
         // await new Promise((resolve, reject) => {
         //   exec(`C://autoitfiles/fileupload.exe "${absolutePath}"`, (err) => {
@@ -68,12 +69,12 @@ async function prdUploadWorkflow(test, testInfo) {
         //     else resolve();
         //   });
         // });
-        await page.waitForTimeout(3000);
+        await page.waitForTimeout(1000);
         await page.click(Properties.Confirm);
       });
 
       await test.step('🔄 Wait for upload completion', async () => {
-        await page.waitForTimeout(10000);
+        await page.waitForTimeout(5000);
         await page.reload();
         await page.waitForTimeout(15000);
         await page.reload();
@@ -82,8 +83,9 @@ async function prdUploadWorkflow(test, testInfo) {
       await test.step('✅ File status is Completed and Fetch Upload ID ', async () => {
         if (statusText === 'Completed') {
           success = true;
-          await test.step('🆔 Fetch Upload ID',async()=>{
-          Upload_ID = await page.textContent(Properties.Upload_id);});
+          await test.step('🆔 Fetch Upload ID', async () => {
+            Upload_ID = await page.textContent(Properties.Upload_id);
+          });
         }
         else if (statusText === 'Import Started') {
           await page.waitForTimeout(3000);
